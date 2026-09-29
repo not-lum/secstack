@@ -16,7 +16,7 @@
                             "==================================================\n" \
                             ANSI_LIGHT_BLUE "capacity" ANSI_RESET " = " ANSI_RED "%zu\n" ANSI_RESET \
                             ANSI_LIGHT_BLUE "size" ANSI_RESET " = " ANSI_RED "%zu\n" ANSI_RESET\
-                            ANSI_LIGHT_BLUE "&data" ANSI_RESET " = " ANSI_RED "[%p]\n" ANSI_RESET \
+                            ANSI_LIGHT_BLUE "data" ANSI_RESET " = " ANSI_RED "[%p]\n" ANSI_RESET \
                             "==================================================\n", \
                             stack_error_str(status), (stk)->_dbug_var_name, (void *)(stk), \
                             (stk)->_dbug_func_name, (stk)->_dbug_filename, (stk)->_dbug_line, \
@@ -27,6 +27,8 @@
             for (size_t i = 0; i < (stk)->size; i++) { \
                 fprintf(stderr, ANSI_LIGHT_BLUE "[%zu]" ANSI_RESET " = " ANSI_RED "<" DBUG_PRINTF_LIT ">\n" ANSI_RESET, i, (stk)->data[i]); \
             } \
+            \
+            fprintf(stderr, "==================================================\n"); \
         } \
         \
     ) \
