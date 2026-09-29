@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <malloc.h>
 #include <stdbool.h>
+#include <string.h>
 
 #define ANSI_GREEN "\e[32m"
 #define ANSI_RED "\e[31m"
@@ -15,6 +16,11 @@
 #define ANSI_BLUE "\e[34m"
 #define ANSI_RESET "\e[0m"
 
+// #define LEFT_CANARY  0xBADFAACE
+// #define RIGHT_CANARY 0xBADB00B5
+
+
+// todo: unite errors via bitwise or and return them
 // todo: print all buffer content - DONE
 // todo: add dump func - DONE
 // todo: dump to file
@@ -25,7 +31,7 @@
     if (status != STACK_OK) { \
         dump_stack((stk), status); \
     } \
-     \
+    \
     ) \
     assert(status == STACK_OK); \
 } while (0)
@@ -54,13 +60,25 @@ void dump_stack(stack_t *stk, StackStatus status) {
     fprintf(stderr, "Stack data " ANSI_GREY "[%p]" ANSI_RESET ":\n", (void *)(stk->data));
     
     for (size_t i = 0; i < stk->capacity; i++) {
-        bool is_last_elem = (i == stk->size - 1);
-        const char *begin_str = (is_last_elem) ? (ANSI_GREEN) : (ANSI_LIGHT_BLUE);
-        const char *end_str = (is_last_elem) ? (ANSI_GREEN "    <-- LAST STACK ELEMENT") : "";
+        const char *begin_str = ANSI_LIGHT_BLUE;
+        const char *end_str = "";
+
+        if (i == 0) {
+            begin_str = ANSI_PURPLE;
+            end_str = ANSI_PURPLE "     <-- LEFT CANARY";
+        } else if (i == stk->size) {
+            begin_str = "* " ANSI_GREEN;
+            end_str = ANSI_GREEN "    <-- LAST STACK ELEMENT";
+        } else if (i == stk->size + 1) {
+            begin_str = ANSI_PURPLE;
+            end_str = ANSI_PURPLE "     <-- RIGHT CANARY";
+        } else if (i <= stk->size) {
+            begin_str = "* " ANSI_LIGHT_BLUE;
+        }
 
         fprintf(stderr, "%s[%zu]" ANSI_RESET 
                         " = " ANSI_RED "<" DBUG_PRINTF_LIT ">" ANSI_RESET
-                        "%s\n",
+                        "%s\n" ANSI_RESET,
                         begin_str, i, (stk)->data[i], end_str);
     }
     
@@ -90,11 +108,27 @@ const char *stack_error_str(StackStatus err) {
             return "stack capacity is bigger than size of memory allocated for it";
         case STACK_DATA_NULL_PTR:
             return "pointer to stack data is NULL";
+        case STACK_LEFT_CANARY_SMASH_DETECTED:
+            return "left canary smash detected";
+        case STACK_RIGHT_CANARY_SMASH_DETECTED:
+            return "right canary smash detected";
         default:
             return "unknown error";
     }
 }
 
+static StackStatus canary_verify(stack_t *stk) {
+    for (size_t i = 0; i < sizeof(stk_elem_t); i++) {
+        if (*((char *)(stk->data + stk->size + 1) + i) != 'D') {
+            return STACK_RIGHT_CANARY_SMASH_DETECTED;
+        }
+        if (*((char *)(stk->data) + i) != 'C') {
+            return STACK_LEFT_CANARY_SMASH_DETECTED;
+        }
+    }
+
+    return STACK_OK;
+}
 
 static StackStatus stack_verify(stack_t *stk) {
     if (stk->size > stk->capacity) {
@@ -109,9 +143,10 @@ static StackStatus stack_verify(stack_t *stk) {
         return STACK_CAPACITY_BIGGER_THAN_MUSABLE;
     }
 
-    return STACK_OK;
+    return canary_verify(stk);
 }
 
+#define R_DATA (stk->data + 1)
 
 StackStatus stack_init(stack_t *stk, size_t capacity
                        ON_DEBUG(,
@@ -126,7 +161,7 @@ StackStatus stack_init(stack_t *stk, size_t capacity
     assert(_dbug_filename != NULL);
     )
 
-    stk->data = calloc(capacity, sizeof(stk_elem_t));
+    stk->data = calloc(capacity + 2, sizeof(stk_elem_t));
     if ((stk->data) == NULL)
         return STACK_INIT_ALLOC_ERROR;
 
@@ -140,23 +175,31 @@ StackStatus stack_init(stack_t *stk, size_t capacity
     stk->_dbug_line = _dbug_line;
     )
 
+    memset(stk->data, 'C', sizeof(stk_elem_t)); // LEFT canary
+    memset(stk->data + 1, 'D', sizeof(stk_elem_t)); // RIGHT canary
+
     ASSERT_OK(stk);
 
     return STACK_OK;
 }
 
+static void move_right_canary(stack_t *stk, bool to_right) {
+    stk_elem_t *dest = (to_right) ? (&stk->data[stk->size + 2]) : (&stk->data[stk->size]);
+    memmove(dest, &stk->data[stk->size + 1], sizeof(stk_elem_t));
+}
 
 void stack_push(stack_t *stk, stk_elem_t elem, StackStatus *err) {
     assert(stk != NULL);
     assert(err != NULL);
     ASSERT_OK(stk);
 
-    if (stk->size == stk->capacity) { // error >
+    if (stk->size == stk->capacity) {
         *err = STACK_MAX_SIZE_REACHED;
         return;
     }
 
-    stk->data[stk->size] = elem;
+    move_right_canary(stk, true);
+    R_DATA[stk->size] = elem;
     stk->size++;
 
     // fprintf(stderr, "err: [%p]\n", (void *)err);
@@ -176,12 +219,14 @@ stk_elem_t stack_pop(stack_t *stk, StackStatus *err) {
         return 0;
     }
 
-    stk_elem_t last_elem = stk->data[stk->size - 1];
+    stk_elem_t last_elem = R_DATA[stk->size - 1];
+    move_right_canary(stk, false);
     stk->size--;
+
+    ASSERT_OK(stk);
 
     *err = STACK_OK;
 
-    ASSERT_OK(stk);
     return last_elem;
 }
 
