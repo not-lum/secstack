@@ -5,6 +5,15 @@
 #include <stdint.h>
 #include <malloc.h>
 
+#define ANSI_GREEN "\e[32m"
+#define ANSI_RED "\e[31m"
+#define ANSI_GREY "\e[90m"
+#define ANSI_YELLOW "\e[33m"
+#define ANSI_PURPLE "\e[35m"
+#define ANSI_LIGHT_BLUE "\e[36m"
+#define ANSI_BLUE "\e[34m"
+#define ANSI_RESET "\e[0m"
+
 #define ASSERT_OK(stk) do { \
     StackStatus status = stack_verify((stk)); \
     \
