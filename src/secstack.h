@@ -50,6 +50,7 @@ StackStatus stack_init(stack_t *stk, size_t capacity
     const char *_dbug_filename,
     const int _dbug_line));
 void stack_push(stack_t *stk, stk_elem_t elem, StackStatus *err);
+void dump_stack(stack_t *stk, StackStatus status);
 stk_elem_t stack_pop(stack_t *stk, StackStatus *err);
 const char *stack_error_str(StackStatus err);
 void stack_destroy(stack_t *stk);

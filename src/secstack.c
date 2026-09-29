@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <malloc.h>
+#include <stdbool.h>
 
 #define ANSI_GREEN "\e[32m"
 #define ANSI_RED "\e[31m"
@@ -14,35 +15,63 @@
 #define ANSI_BLUE "\e[34m"
 #define ANSI_RESET "\e[0m"
 
+// todo: print all buffer content - DONE
+// todo: add dump func - DONE
+// todo: dump to file
 #define ASSERT_OK(stk) do { \
     StackStatus status = stack_verify((stk)); \
     \
     ON_DEBUG( \
-        if (status != STACK_OK) { \
-            fprintf(stderr, ANSI_RED "[SECSTACK ERROR]" ANSI_RESET ": " ANSI_LIGHT_BLUE "%s\n" ANSI_RESET \
-                            "stack " ANSI_BLUE "'%s'" ANSI_GREY " [%p] " ANSI_RESET \
-                            "created by " ANSI_GREEN "'%s()'" ANSI_RESET " at " ANSI_GREEN "'%s':%d\n" ANSI_RESET \
-                            "==================================================\n" \
-                            ANSI_LIGHT_BLUE "capacity" ANSI_RESET " = " ANSI_RED "%zu\n" ANSI_RESET \
-                            ANSI_LIGHT_BLUE "size" ANSI_RESET " = " ANSI_RED "%zu\n" ANSI_RESET\
-                            ANSI_LIGHT_BLUE "data" ANSI_RESET " = " ANSI_RED "[%p]\n" ANSI_RESET \
-                            "==================================================\n", \
-                            stack_error_str(status), (stk)->_dbug_var_name, (void *)(stk), \
-                            (stk)->_dbug_func_name, (stk)->_dbug_filename, (stk)->_dbug_line, \
-                            (stk)->capacity, (stk)->size, (void *)(stk)->data); \
-            \
-            fprintf(stderr, "Stack data " ANSI_GREY "[%p]" ANSI_RESET ":\n", (void *)((stk)->data)); \
-            \
-            for (size_t i = 0; i < (stk)->size; i++) { \
-                fprintf(stderr, ANSI_LIGHT_BLUE "[%zu]" ANSI_RESET " = " ANSI_RED "<" DBUG_PRINTF_LIT ">\n" ANSI_RESET, i, (stk)->data[i]); \
-            } \
-            \
-            fprintf(stderr, "==================================================\n"); \
-        } \
-        \
+    if (status != STACK_OK) { \
+        dump_stack((stk), status); \
+    } \
+     \
     ) \
     assert(status == STACK_OK); \
 } while (0)
+
+void dump_stack(stack_t *stk, StackStatus status) {
+    assert(stk != NULL);
+
+    if (status == STACK_OK) {
+        fprintf(stderr, ANSI_YELLOW "\n[SECSTACK DUMP]\n" ANSI_RESET);
+    } else {
+        fprintf(stderr, ANSI_RED "\n[SECSTACK ERROR]" ANSI_RESET ": (" ANSI_LIGHT_BLUE "%s" ANSI_RESET ")\n",
+                stack_error_str(status));
+    }
+
+    fprintf(stderr, "stack " ANSI_BLUE "'%s'" ANSI_GREY " [%p] " ANSI_RESET
+                    "created by " ANSI_GREEN "'%s()'" ANSI_RESET " at " ANSI_GREEN "'%s':%d\n" ANSI_RESET
+                    "==================================================\n"
+                    ANSI_LIGHT_BLUE "capacity" ANSI_RESET " = " ANSI_RED "%zu\n" ANSI_RESET
+                    ANSI_LIGHT_BLUE "size" ANSI_RESET " = " ANSI_RED "%zu\n" ANSI_RESET
+                    ANSI_LIGHT_BLUE "data" ANSI_RESET " = " ANSI_RED "[%p]\n" ANSI_RESET
+                    "==================================================\n",
+                    stk->_dbug_var_name, (void *)(stk),
+                    stk->_dbug_func_name, stk->_dbug_filename, stk->_dbug_line,
+                    stk->capacity, stk->size, (void *)stk->data);
+    
+    fprintf(stderr, "Stack data " ANSI_GREY "[%p]" ANSI_RESET ":\n", (void *)(stk->data));
+    
+    for (size_t i = 0; i < stk->capacity; i++) {
+        bool is_last_elem = (i == stk->size - 1);
+        const char *begin_str = (is_last_elem) ? (ANSI_GREEN) : (ANSI_LIGHT_BLUE);
+        const char *end_str = (is_last_elem) ? (ANSI_GREEN "    <-- LAST STACK ELEMENT") : "";
+
+        fprintf(stderr, "%s[%zu]" ANSI_RESET 
+                        " = " ANSI_RED "<" DBUG_PRINTF_LIT ">" ANSI_RESET
+                        "%s\n",
+                        begin_str, i, (stk)->data[i], end_str);
+    }
+    
+    fprintf(stderr, "==================================================\n");
+
+    if (status == STACK_OK) {
+        fprintf(stderr, ANSI_YELLOW "[END SECSTACK DUMP]\n\n" ANSI_RESET);
+    } else {
+        fprintf(stderr, ANSI_RED "[END SECSTACK ERROR]\n\n" ANSI_RESET);
+    }
+}
 
 
 const char *stack_error_str(StackStatus err) {
