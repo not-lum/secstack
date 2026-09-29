@@ -14,10 +14,16 @@
 #define ANSI_PURPLE "\e[35m"
 #define ANSI_LIGHT_BLUE "\e[36m"
 #define ANSI_BLUE "\e[34m"
+
+#define ANSI_BG_CYAN "\e[46m"
+#define ANSI_BG_WHITE "\e[47m"
+#define ANSI_BG_YELLOW "\e[43m"
+#define ANSI_BG_RED "\e[41m"
+
 #define ANSI_RESET "\e[0m"
 
-// #define LEFT_CANARY  0xBADFAACE
-// #define RIGHT_CANARY 0xBADB00B5
+#define L_CANARY 0xCC
+#define R_CANARY 0xDD
 
 
 // todo: unite errors via bitwise or and return them
@@ -36,6 +42,46 @@
     assert(status == STACK_OK); \
 } while (0)
 
+static void mem_hex(void *data, size_t data_size, size_t str_size, char *out_str) {
+    assert(data != NULL);
+    assert(out_str != NULL);
+
+    size_t i = 0;
+    size_t len = (data_size <= str_size - 1) ? (data_size) : (str_size - 1); 
+
+    for (; i < len; i++) {
+        sprintf(out_str + i * 2, "%02X", *((uint8_t *)(data) + i));
+    }
+    
+    *((char *)(out_str) + i * 2 + 1) = '\0';
+}
+
+void dump_canary(stack_t *stk, StackStatus status, size_t ind, bool left) {
+    assert(stk != NULL);
+
+    const char *ind_color = ANSI_PURPLE;
+    const char *val_color = ANSI_GREEN;
+    const char *arrow_str = (left) ? (ANSI_PURPLE "   <-- LEFT CANARY") : (ANSI_PURPLE "   <-- RIGHT CANARY");
+
+    char hexed_canary[sizeof(stk_elem_t) * 2 + 1] = {};
+    mem_hex(stk->data + ind, sizeof(stk_elem_t),
+            sizeof(hexed_canary) / sizeof(hexed_canary[0]), hexed_canary);
+
+    if (status == STACK_LEFT_CANARY_SMASH_DETECTED && left) {
+        ind_color = ANSI_RED;
+        val_color = ANSI_YELLOW ANSI_BG_RED;
+        arrow_str = ANSI_RED "   <-- LEFT CANARY SMASHED: should be filled with 0xCC";
+    } else if (status == STACK_RIGHT_CANARY_SMASH_DETECTED && !left) {
+        ind_color = ANSI_RED;
+        val_color = ANSI_YELLOW ANSI_BG_RED;
+        arrow_str = ANSI_RED "   <-- RIGHT CANARY SMASHED: should be filled with 0xDD";
+    }
+    fprintf(stderr, "%s[%zu]" ANSI_RESET 
+                    " = %s<0x%s>" ANSI_RESET
+                    "%s\n" ANSI_RESET,
+                    ind_color, ind, val_color, hexed_canary, arrow_str);
+}
+
 void dump_stack(stack_t *stk, StackStatus status) {
     assert(stk != NULL);
 
@@ -49,9 +95,9 @@ void dump_stack(stack_t *stk, StackStatus status) {
     fprintf(stderr, "stack " ANSI_BLUE "'%s'" ANSI_GREY " [%p] " ANSI_RESET
                     "created by " ANSI_GREEN "'%s()'" ANSI_RESET " at " ANSI_GREEN "'%s':%d\n" ANSI_RESET
                     "==================================================\n"
-                    ANSI_LIGHT_BLUE "capacity" ANSI_RESET " = " ANSI_RED "%zu\n" ANSI_RESET
-                    ANSI_LIGHT_BLUE "size" ANSI_RESET " = " ANSI_RED "%zu\n" ANSI_RESET
-                    ANSI_LIGHT_BLUE "data" ANSI_RESET " = " ANSI_RED "[%p]\n" ANSI_RESET
+                    ANSI_LIGHT_BLUE "capacity" ANSI_RESET " = " ANSI_YELLOW "%zu\n" ANSI_RESET
+                    ANSI_LIGHT_BLUE "size" ANSI_RESET " = " ANSI_YELLOW "%zu\n" ANSI_RESET
+                    ANSI_LIGHT_BLUE "data" ANSI_RESET " = " ANSI_YELLOW "[%p]\n" ANSI_RESET
                     "==================================================\n",
                     stk->_dbug_var_name, (void *)(stk),
                     stk->_dbug_func_name, stk->_dbug_filename, stk->_dbug_line,
@@ -59,25 +105,25 @@ void dump_stack(stack_t *stk, StackStatus status) {
     
     fprintf(stderr, "Stack data " ANSI_GREY "[%p]" ANSI_RESET ":\n", (void *)(stk->data));
     
-    for (size_t i = 0; i < stk->capacity; i++) {
+    for (size_t i = 0; i < stk->capacity + 2; i++) {
         const char *begin_str = ANSI_LIGHT_BLUE;
         const char *end_str = "";
 
         if (i == 0) {
-            begin_str = ANSI_PURPLE;
-            end_str = ANSI_PURPLE "     <-- LEFT CANARY";
+            dump_canary(stk, status, i, true);
+            continue;
         } else if (i == stk->size) {
             begin_str = "* " ANSI_GREEN;
             end_str = ANSI_GREEN "    <-- LAST STACK ELEMENT";
         } else if (i == stk->size + 1) {
-            begin_str = ANSI_PURPLE;
-            end_str = ANSI_PURPLE "     <-- RIGHT CANARY";
+            dump_canary(stk, status, i, false);
+            continue;
         } else if (i <= stk->size) {
             begin_str = "* " ANSI_LIGHT_BLUE;
         }
 
         fprintf(stderr, "%s[%zu]" ANSI_RESET 
-                        " = " ANSI_RED "<" DBUG_PRINTF_LIT ">" ANSI_RESET
+                        " = " ANSI_YELLOW "<" DBUG_PRINTF_LIT ">" ANSI_RESET
                         "%s\n" ANSI_RESET,
                         begin_str, i, (stk)->data[i], end_str);
     }
@@ -118,11 +164,14 @@ const char *stack_error_str(StackStatus err) {
 }
 
 static StackStatus canary_verify(stack_t *stk) {
+    assert(stk != NULL);
+
+    // TODO: hexspeak
     for (size_t i = 0; i < sizeof(stk_elem_t); i++) {
-        if (*((char *)(stk->data + stk->size + 1) + i) != 'D') {
+        if (*((uint8_t *)(stk->data + stk->size + 1) + i) != R_CANARY) {
             return STACK_RIGHT_CANARY_SMASH_DETECTED;
         }
-        if (*((char *)(stk->data) + i) != 'C') {
+        if (*((uint8_t *)(stk->data) + i) != L_CANARY) {
             return STACK_LEFT_CANARY_SMASH_DETECTED;
         }
     }
@@ -175,8 +224,8 @@ StackStatus stack_init(stack_t *stk, size_t capacity
     stk->_dbug_line = _dbug_line;
     )
 
-    memset(stk->data, 'C', sizeof(stk_elem_t)); // LEFT canary
-    memset(stk->data + 1, 'D', sizeof(stk_elem_t)); // RIGHT canary
+    memset(stk->data, L_CANARY, sizeof(stk_elem_t)); //TODO: hexspeak
+    memset(stk->data + 1, R_CANARY, sizeof(stk_elem_t));
 
     ASSERT_OK(stk);
 
@@ -185,7 +234,10 @@ StackStatus stack_init(stack_t *stk, size_t capacity
 
 static void move_right_canary(stack_t *stk, bool to_right) {
     stk_elem_t *dest = (to_right) ? (&stk->data[stk->size + 2]) : (&stk->data[stk->size]);
-    memmove(dest, &stk->data[stk->size + 1], sizeof(stk_elem_t));
+    stk_elem_t *src = stk->data + stk->size + 1;
+    memmove(dest, src, sizeof(stk_elem_t));
+    if (!to_right)
+    memset(src, 0, sizeof(stk_elem_t));
 }
 
 void stack_push(stack_t *stk, stk_elem_t elem, StackStatus *err) {
@@ -208,7 +260,7 @@ void stack_push(stack_t *stk, stk_elem_t elem, StackStatus *err) {
     ASSERT_OK(stk);
 }
 
-
+//TODO: files 
 stk_elem_t stack_pop(stack_t *stk, StackStatus *err) {
     assert(stk != NULL);
     assert(err != NULL);
