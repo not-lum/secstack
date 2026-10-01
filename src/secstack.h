@@ -1,6 +1,7 @@
 #pragma once //TODO: header guard
 
 #include <stddef.h>
+#include <stdint.h>
 
 #define SECSTACK_DBG
 
@@ -23,17 +24,17 @@
 typedef enum {
     STACK_OK = 0,
     STACK_INIT_ALLOC_ERROR,
-    STACK_MAX_SIZE_REACHED,
     STACK_CANNOT_POP_FROM_EMPTY,
     STACK_SIZE_BIGGER_THAN_CAPACITY,
     STACK_CAPACITY_BIGGER_THAN_MUSABLE,
     STACK_DATA_NULL_PTR,
     STACK_RIGHT_CANARY_SMASH_DETECTED,
-    STACK_LEFT_CANARY_SMASH_DETECTED
+    STACK_LEFT_CANARY_SMASH_DETECTED,
+    STACK_REALLOC_FAIL
 } StackStatus;
 
 typedef struct stack_t {
-    stk_elem_t *data;
+    uint8_t *data;
     size_t capacity;
     size_t size;
     ON_DEBUG(
@@ -41,7 +42,6 @@ typedef struct stack_t {
     const char *_dbug_func_name;
     const char *_dbug_filename;
     int _dbug_line;
-    const char *_dbug_op;
     )
 } stack_t;
 
@@ -55,4 +55,6 @@ void stack_push(stack_t *stk, stk_elem_t elem, StackStatus *err);
 void dump_stack(stack_t *stk, StackStatus status);
 stk_elem_t stack_pop(stack_t *stk, StackStatus *err);
 const char *stack_error_str(StackStatus err);
+StackStatus stack_verify(stack_t *stk);
+StackStatus canary_verify(stack_t *stk);
 void stack_destroy(stack_t *stk);
