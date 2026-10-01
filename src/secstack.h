@@ -2,6 +2,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 #define SECSTACK_DBG
 
@@ -53,6 +55,7 @@ StackStatus stack_init(stack_t *stk, size_t capacity
     const int _dbug_line));
 void stack_push(stack_t *stk, stk_elem_t elem, StackStatus *err);
 void dump_stack(stack_t *stk, StackStatus status);
+void dump_stack_to(stack_t *stk, StackStatus status, FILE *out, bool colors);
 stk_elem_t stack_pop(stack_t *stk, StackStatus *err);
 const char *stack_error_str(StackStatus err);
 StackStatus stack_verify(stack_t *stk);
