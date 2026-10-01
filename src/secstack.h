@@ -1,11 +1,11 @@
-#pragma once //TODO: header guard
+#pragma once
 
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
 
-#define SECSTACK_DBG
+// #define SECSTACK_DBG
 
 #ifdef SECSTACK_DBG
 #   define ON_DEBUG(...) __VA_ARGS__
@@ -32,7 +32,8 @@ typedef enum {
     STACK_DATA_NULL_PTR,
     STACK_RIGHT_CANARY_SMASH_DETECTED,
     STACK_LEFT_CANARY_SMASH_DETECTED,
-    STACK_REALLOC_FAIL
+    STACK_REALLOC_FAIL,
+    STACK_NULL
 } StackStatus;
 
 typedef struct stack_t {

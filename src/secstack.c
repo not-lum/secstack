@@ -56,6 +56,7 @@ static size_t left_cnry_size() {
         return CANARY_SIZE + alignment - (CANARY_SIZE % alignment);
 }
 
+ON_DEBUG(
 static void mem_hex(uint8_t *data, size_t data_size, size_t str_size, char *out_str) {
     assert(data != NULL);
     assert(out_str != NULL);
@@ -106,8 +107,8 @@ void dump_canary(stack_t *stk, StackStatus status, bool left, FILE *out, bool co
 }
 
 void dump_stack_to(stack_t *stk, StackStatus status, FILE *out, bool colors) {
-    assert(stk != NULL);
     assert(out != NULL);
+    if (status == STACK_NULL) return;
 
     if (status == STACK_OK) {
         fprintf(out, "%s\n[SECSTACK DUMP]\n%s",
@@ -138,64 +139,66 @@ void dump_stack_to(stack_t *stk, StackStatus status, FILE *out, bool colors) {
                     COLOR_IF(colors, ANSI_LIGHT_BLUE), COLOR_IF(colors, ANSI_RESET),
                     COLOR_IF(colors, ANSI_YELLOW), (void *)stk->data, COLOR_IF(colors, ANSI_RESET));
     
-    fprintf(out, "Stack elements data %s[%p]%s:\n",
-            COLOR_IF(colors, ANSI_GREY), (void *)(stk->data), COLOR_IF(colors, ANSI_RESET));
-    dump_canary(stk, status, true, out, colors);
-    
-    for (size_t i = 0; i < stk->size; i++) {
-        const char *begin_str = colors ? "* " ANSI_LIGHT_BLUE : "* ";
-        const char *end_str = "";
-
-        if (i == stk->size - 1) {
-            begin_str = colors ? "* " ANSI_GREEN : "* ";
-            end_str = colors ? ANSI_BLUE "    <-- LAST STACK ELEMENT" : "    <-- LAST STACK ELEMENT";
-        }
-    
-        fprintf(out, "%s[%zu]%s"
-                     " = %s<" DBUG_PRINTF_LIT ">%s"
-                     "%s\n%s",
-                     begin_str, i, COLOR_IF(colors, ANSI_RESET),
-                     COLOR_IF(colors, ANSI_YELLOW), *(R_DATA + i), COLOR_IF(colors, ANSI_RESET),
-                     end_str, COLOR_IF(colors, ANSI_RESET));
-    }
-
-    dump_canary(stk, status, false, out, colors);
-
-    fprintf(out, "==================================================\n");
-    size_t full_data_size = malloc_usable_size(stk->data);
-
-    fprintf(out, "Full data buffer hex dump (%s%zu bytes%s) %s[%p]%s:\n",
-            COLOR_IF(colors, ANSI_LIGHT_BLUE), full_data_size, COLOR_IF(colors, ANSI_RESET),
-            COLOR_IF(colors, ANSI_GREY), stk->data, COLOR_IF(colors, ANSI_RESET));
-
-    bool new_line = false;
-
-    for (size_t i = 0; i < full_data_size - 1; i += 2) {
-        new_line = false;
-        if (i % 16 == 0) {
-            new_line = true;
-            fprintf(out, "\n%s[%p] %s",
-                    COLOR_IF(colors, ANSI_GREY), stk->data + i, COLOR_IF(colors, ANSI_RESET));
-        }
+    if (stk->data != NULL) {
+        fprintf(out, "Stack elements data %s[%p]%s:\n",
+                COLOR_IF(colors, ANSI_GREY), (void *)(stk->data), COLOR_IF(colors, ANSI_RESET));
+        dump_canary(stk, status, true, out, colors);
         
-        const char *first_b_col = "";
-        const char *second_b_col = "";
-        if (i < stk->size * sizeof(stk_elem_t) + CANARY_SIZE + left_cnry_size()) {
-            first_b_col = COLOR_IF(colors, ANSI_YELLOW);
-        }
-        if (i + 1 < stk->size * sizeof(stk_elem_t) + CANARY_SIZE + left_cnry_size()) {
-            second_b_col = COLOR_IF(colors, ANSI_YELLOW);
-        }
-        
-        fprintf(out, "%s%02X%s%02X %s", first_b_col, stk->data[i],
-                                         second_b_col, stk->data[i + 1],
-                                         COLOR_IF(colors, ANSI_RESET));
-    }
+        for (size_t i = 0; i < stk->size; i++) {
+            const char *begin_str = colors ? "* " ANSI_LIGHT_BLUE : "* ";
+            const char *end_str = "";
 
-    if (full_data_size % 2 != 0)
-        fprintf(out, "%02X\n", stk->data[full_data_size - 1]);
-    else if (!new_line)
-        fprintf(out, "\n");
+            if (i == stk->size - 1) {
+                begin_str = colors ? "* " ANSI_GREEN : "* ";
+                end_str = colors ? ANSI_BLUE "    <-- LAST STACK ELEMENT" : "    <-- LAST STACK ELEMENT";
+            }
+        
+            fprintf(out, "%s[%zu]%s"
+                        " = %s<" DBUG_PRINTF_LIT ">%s"
+                        "%s\n%s",
+                        begin_str, i, COLOR_IF(colors, ANSI_RESET),
+                        COLOR_IF(colors, ANSI_YELLOW), *(R_DATA + i), COLOR_IF(colors, ANSI_RESET),
+                        end_str, COLOR_IF(colors, ANSI_RESET));
+        }
+
+        dump_canary(stk, status, false, out, colors);
+
+        fprintf(out, "==================================================\n");
+        size_t full_data_size = malloc_usable_size(stk->data);
+
+        fprintf(out, "Full data buffer hex dump (%s%zu bytes%s) %s[%p]%s:\n",
+                COLOR_IF(colors, ANSI_LIGHT_BLUE), full_data_size, COLOR_IF(colors, ANSI_RESET),
+                COLOR_IF(colors, ANSI_GREY), stk->data, COLOR_IF(colors, ANSI_RESET));
+
+        bool new_line = false;
+
+        for (size_t i = 0; i < full_data_size - 1; i += 2) {
+            new_line = false;
+            if (i % 16 == 0) {
+                new_line = true;
+                fprintf(out, "\n%s[%p] %s",
+                        COLOR_IF(colors, ANSI_GREY), stk->data + i, COLOR_IF(colors, ANSI_RESET));
+            }
+            
+            const char *first_b_col = "";
+            const char *second_b_col = "";
+            if (i < stk->size * sizeof(stk_elem_t) + CANARY_SIZE + left_cnry_size()) {
+                first_b_col = COLOR_IF(colors, ANSI_YELLOW);
+            }
+            if (i + 1 < stk->size * sizeof(stk_elem_t) + CANARY_SIZE + left_cnry_size()) {
+                second_b_col = COLOR_IF(colors, ANSI_YELLOW);
+            }
+            
+            fprintf(out, "%s%02X%s%02X %s", first_b_col, stk->data[i],
+                                            second_b_col, stk->data[i + 1],
+                                            COLOR_IF(colors, ANSI_RESET));
+        }
+
+        if (full_data_size % 2 != 0)
+            fprintf(out, "%02X\n", stk->data[full_data_size - 1]);
+        else if (!new_line)
+            fprintf(out, "\n");
+    }
 
     fprintf(out, "\n==================================================\n");
 
@@ -208,6 +211,7 @@ void dump_stack_to(stack_t *stk, StackStatus status, FILE *out, bool colors) {
     }
 }
 
+
 void dump_stack(stack_t *stk, StackStatus status) {
     dump_stack_to(stk, status, stderr, true);
     FILE* log_file = fopen(".secstack.log", "a");
@@ -218,7 +222,7 @@ void dump_stack(stack_t *stk, StackStatus status) {
         fclose(log_file);
     }
 }
-
+)
 
 const char *stack_error_str(StackStatus err) {
     switch (err) {
@@ -240,6 +244,8 @@ const char *stack_error_str(StackStatus err) {
             return "right canary smash detected";
         case STACK_REALLOC_FAIL:
             return "stack realloc failed";
+        case STACK_NULL:
+            return "stack null pointer";
         default:
             return "unknown error";
     }
@@ -260,11 +266,14 @@ StackStatus canary_verify(stack_t *stk) {
             return STACK_RIGHT_CANARY_SMASH_DETECTED;
     }
     
-
     return STACK_OK;
 }
 
 StackStatus stack_verify(stack_t *stk) {
+    if (stk == NULL) {
+        return STACK_NULL;
+    }
+
     if (stk->size > stk->capacity) {
         return STACK_SIZE_BIGGER_THAN_CAPACITY;
     }
@@ -286,6 +295,7 @@ static void guard_alignment(uint8_t *addr) {
         *(addr + i) = ALIGNMENT_FILL;
     }
 }
+
 
 StackStatus stack_init(stack_t *stk, size_t capacity
                        ON_DEBUG(,
@@ -364,7 +374,6 @@ void stack_push(stack_t *stk, stk_elem_t elem, StackStatus *err) {
     *(R_DATA + stk->size) = elem;
     stk->size++;
 
-    // fprintf(stderr, "err: [%p]\n", (void *)err);
     *err = STACK_OK;
 
     ASSERT_OK(stk);
