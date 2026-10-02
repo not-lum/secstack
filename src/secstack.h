@@ -21,11 +21,11 @@
 #define VAR_NAME(x) #x
 
 #ifndef stk_elem_t
-#   define stk_elem_t double
+#   define stk_elem_t int
 #endif
 
 #ifndef DBUG_PRINTF_LIT
-#   define DBUG_PRINTF_LIT "%f"
+#   define DBUG_PRINTF_LIT "%d"
 #endif
 
 typedef enum {

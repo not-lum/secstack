@@ -49,8 +49,7 @@ void dump_canary(stack_t *stk, StackStatus status, bool left, FILE *out, bool co
     const char *arrow_str = (left) ? "   <-- LEFT CANARY" : "   <-- RIGHT CANARY";
 
     char hexed_canary[left_cnry_size() * 2 + 1] = {};
-    uint8_t *cnry_addr = (left) ? (stk->data) :
-                         (stk->data + left_cnry_size() + stk->size * sizeof(stk_elem_t));
+    uint8_t *cnry_addr = (left) ? (stk->data) : (get_r_canary_addr(stk));
     size_t cnry_size = (left) ? left_cnry_size() : CANARY_SIZE;
 
     mem_hex(cnry_addr, cnry_size, left_cnry_size() * 2 + 1, hexed_canary);
@@ -150,10 +149,12 @@ void dump_stack_to(stack_t *stk, StackStatus status, FILE *out, bool colors) {
             
             const char *first_b_col = "";
             const char *second_b_col = "";
-            if (i < stk->size * sizeof(stk_elem_t) + CANARY_SIZE + left_cnry_size()) {
+            size_t valuable_part_len = get_r_canary_addr(stk) + CANARY_SIZE - stk->data;
+
+            if (i < valuable_part_len) {
                 first_b_col = COLOR_IF(colors, ANSI_YELLOW);
             }
-            if (i + 1 < stk->size * sizeof(stk_elem_t) + CANARY_SIZE + left_cnry_size()) {
+            if (i + 1 < valuable_part_len) {
                 second_b_col = COLOR_IF(colors, ANSI_YELLOW);
             }
             

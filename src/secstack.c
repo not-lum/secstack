@@ -12,11 +12,6 @@
 #include <stdalign.h>
 
 
-// 0xB07CEBAC0CE7B0BE
-const uint8_t L_CANARY[8] = {0xB0, 0x7C, 0xEB, 0xAC, 0x0C, 0xE7, 0xB0, 0xBE};
-// 0xABBA3EC0BA3EBAE7
-const uint8_t R_CANARY[8] = {0xAB, 0xBA, 0x3E, 0xC0, 0xBA, 0x3E, 0xBA, 0xE7};
-
 #define ASSERT_OK(stk) do { \
     StackStatus status = stack_verify((stk)); \
     \
@@ -59,25 +54,6 @@ const char *stack_error_str(StackStatus err) {
     }
 }
 
-
-StackStatus canary_verify(stack_t *stk) {
-    assert(stk != NULL);
-
-    for (size_t i = 0; i < left_cnry_size(); i++) {
-        if ((i < CANARY_SIZE && stk->data[i] != *((uint8_t *)&L_CANARY + i)) ||
-            (i >= CANARY_SIZE && stk->data[i] != ALIGNMENT_FILL))
-            return STACK_LEFT_CANARY_SMASH_DETECTED;
-    }
-
-    for (size_t i = 0; i < CANARY_SIZE; i++) {
-        if (stk->data[left_cnry_size() + stk->size * sizeof(stk_elem_t) + i] != *((uint8_t *)&R_CANARY + i))
-            return STACK_RIGHT_CANARY_SMASH_DETECTED;
-    }
-    
-    return STACK_OK;
-}
-
-
 StackStatus stack_verify(stack_t *stk) {
     if (stk == NULL) {
         return STACK_NULL;
@@ -99,7 +75,13 @@ StackStatus stack_verify(stack_t *stk) {
         return STACK_CAPACITY_BIGGER_THAN_MUSABLE;
     }
 
-    return canary_verify(stk);
+    if (!check_l_canary(stk))
+        return STACK_LEFT_CANARY_SMASH_DETECTED;
+    
+    if (!check_r_canary(stk))
+        return STACK_RIGHT_CANARY_SMASH_DETECTED;
+
+    return STACK_OK;
 }
 
 
@@ -110,15 +92,15 @@ StackStatus stack_init(stack_t *stk, size_t capacity
                        const char *_dbug_filename,
                        const int _dbug_line)) {
     assert(stk != NULL);
-    size_t l_cnry_size = left_cnry_size();
-    assert(capacity < (SIZE_MAX - l_cnry_size - CANARY_SIZE) / sizeof(stk_elem_t));
+    assert(capacity < (SIZE_MAX - left_cnry_size() - CANARY_SIZE) / sizeof(stk_elem_t));
     ON_DEBUG(
     assert(_dbug_var_name != NULL);
     assert(_dbug_func_name != NULL);
     assert(_dbug_filename != NULL);
     )
 
-    size_t alloc_size = l_cnry_size + capacity * sizeof(stk_elem_t) + CANARY_SIZE;
+    size_t alloc_size = left_cnry_size() + capacity * sizeof(stk_elem_t) +
+                        CANARY_SIZE * 2;
 
     stk->data = calloc(alloc_size, 1);
     if ((stk->data) == NULL)
@@ -132,22 +114,21 @@ StackStatus stack_init(stack_t *stk, size_t capacity
     stk->_dbug_func_name = _dbug_func_name;
     stk->_dbug_filename = _dbug_filename;
     stk->_dbug_line = _dbug_line;
+    
+    set_canaries(stk);
     )
-
-    memcpy(stk->data, &L_CANARY, CANARY_SIZE);
-    guard_alignment(stk->data);
-    memcpy(stk->data + l_cnry_size, &R_CANARY, CANARY_SIZE);
 
     ASSERT_OK(stk);
 
     return STACK_OK;
 }
 
+
 static StackStatus stack_resize(stack_t *stk, size_t new_capacity) {
     assert(stk != NULL);
 
     uint8_t *tmp = realloc(stk->data,
-                           left_cnry_size() + new_capacity * sizeof(stk_elem_t) + CANARY_SIZE);
+                           left_cnry_size() + new_capacity * sizeof(stk_elem_t) + CANARY_SIZE * 2);
 
     if (tmp == NULL)
         return STACK_REALLOC_FAIL;
@@ -157,6 +138,7 @@ static StackStatus stack_resize(stack_t *stk, size_t new_capacity) {
 
     return STACK_OK;
 }
+
 
 void stack_push(stack_t *stk, stk_elem_t elem, StackStatus *err) {
     assert(stk != NULL);
