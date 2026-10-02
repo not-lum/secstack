@@ -5,7 +5,12 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-// #define SECSTACK_DBG
+#define SECSTACK_DBG
+
+#define ALIGNMENT_FILL 0x67
+#define CANARY_SIZE 8
+#define R_DATA (stk_elem_t *)(stk->data + left_cnry_size())
+
 
 #ifdef SECSTACK_DBG
 #   define ON_DEBUG(...) __VA_ARGS__
@@ -33,7 +38,8 @@ typedef enum {
     STACK_RIGHT_CANARY_SMASH_DETECTED,
     STACK_LEFT_CANARY_SMASH_DETECTED,
     STACK_REALLOC_FAIL,
-    STACK_NULL
+    STACK_NULL,
+    STACK_DATA_BAD_ALIGNMENT
 } StackStatus;
 
 typedef struct stack_t {
