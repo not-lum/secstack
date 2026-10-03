@@ -135,10 +135,23 @@ StackStatus stack_init(stack_t *stk, size_t capacity
 }
 
 
+static void *recalloc(void *old_ptr, size_t new_size) {
+    assert(old_ptr != NULL);
+
+    void *tmp = realloc(old_ptr, new_size);
+    if (tmp == NULL)
+        return NULL;
+
+    memset(old_ptr + new_size, 0, malloc_usable_size(tmp) - new_size);
+
+    return tmp;
+}
+
+
 static StackStatus stack_resize(stack_t *stk, size_t new_capacity) {
     assert(stk != NULL);
 
-    uint8_t *tmp = realloc(stk->data,
+    uint8_t *tmp = recalloc(stk->data,
                            left_cnry_size() + new_capacity * sizeof(stk_elem_t) + CANARY_SIZE * 2);
 
     if (tmp == NULL)
