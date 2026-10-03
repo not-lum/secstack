@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <assert.h>
 #include <malloc.h>
+#include <inttypes.h>
 
 
 ON_DEBUG(
@@ -21,6 +22,21 @@ static void mem_hex(uint8_t *data, size_t data_size, size_t str_size, char *out_
     }
     
     *((char *)(out_str) + i * 2) = '\0';
+}
+
+void set_struct_cnry_format(const char **name_col, const char **val_col,
+                            const char **end_str, bool colors, bool left) {
+    *name_col = COLOR_IF(colors, ANSI_RED);
+    *val_col = COLOR_IF(colors, ANSI_BG_RED ANSI_YELLOW);
+
+    if (left)
+        *end_str = ANSI_RESET "   " ANSI_RED "<-- STRUCT LEFT CANARY SMASHED" ANSI_RESET;
+    else
+        *end_str = ANSI_RESET "   " ANSI_RED "<-- STRUCT RIGHT CANARY SMASHED" ANSI_RESET;
+    
+
+    if (!colors)
+        *end_str = (left) ? "   <-- STRUCT LEFT CANARY SMASHED" : "   <-- STRUCT RIGHT CANARY SMASHED";
 }
 
 void dump_canary(stack_t *stk, StackStatus status, bool left, FILE *out, bool colors) {
@@ -71,24 +87,48 @@ void dump_stack_to(stack_t *stk, StackStatus status, FILE *out, bool colors) {
                 COLOR_IF(colors, ANSI_RESET));
     }
 
+    const char *l_cnry_name_col = ANSI_PURPLE;
+    const char *l_cnry_val_col = ANSI_GREEN;
+    const char *l_cnry_end_str = ANSI_RESET;
+
+    const char *r_cnry_name_col = ANSI_PURPLE;
+    const char *r_cnry_val_col = ANSI_GREEN;
+    const char *r_cnry_end_str = ANSI_RESET;
+
+    if (status == STACK_STRUCT_LEFT_CANARY_SMASH_DETECTED) {
+        set_struct_cnry_format(&l_cnry_name_col, &l_cnry_val_col,
+                               &l_cnry_end_str, colors, true);
+    }
+
+    if (status == STACK_STRUCT_RIGHT_CANARY_SMASH_DETECTED) {
+        set_struct_cnry_format(&r_cnry_name_col, &r_cnry_val_col,
+                               &r_cnry_end_str, colors, false);
+    }
+
     fprintf(out, "stack %s'%s'%s [%p] %s"
                     "created by %s'%s()'%s at %s'%s':%d\n%s"
                     "==================================================\n"
+                    "%sl_canary%s = %s<%" S_CNRY_PRINTF_LIT ">%s\n"
                     "%scapacity%s = %s%zu\n%s"
                     "%ssize%s = %s%zu\n%s"
                     "%sdata%s = %s[%p]\n%s"
+                    "%sr_canary%s = %s<%" S_CNRY_PRINTF_LIT ">%s\n"
                     "==================================================\n",
                     COLOR_IF(colors, ANSI_BLUE), stk->_dbug_var_name,
                     COLOR_IF(colors, ANSI_GREY), (void *)(stk), COLOR_IF(colors, ANSI_RESET),
                     COLOR_IF(colors, ANSI_GREEN), stk->_dbug_func_name, COLOR_IF(colors, ANSI_RESET),
                     COLOR_IF(colors, ANSI_GREEN), stk->_dbug_filename, stk->_dbug_line,
                     COLOR_IF(colors, ANSI_RESET),
+                    l_cnry_name_col, COLOR_IF(colors, ANSI_RESET),
+                    l_cnry_val_col, stk->l_canary, l_cnry_end_str,
                     COLOR_IF(colors, ANSI_LIGHT_BLUE), COLOR_IF(colors, ANSI_RESET),
                     COLOR_IF(colors, ANSI_YELLOW), stk->capacity, COLOR_IF(colors, ANSI_RESET),
                     COLOR_IF(colors, ANSI_LIGHT_BLUE), COLOR_IF(colors, ANSI_RESET),
                     COLOR_IF(colors, ANSI_YELLOW), stk->size, COLOR_IF(colors, ANSI_RESET),
                     COLOR_IF(colors, ANSI_LIGHT_BLUE), COLOR_IF(colors, ANSI_RESET),
-                    COLOR_IF(colors, ANSI_YELLOW), (void *)stk->data, COLOR_IF(colors, ANSI_RESET));
+                    COLOR_IF(colors, ANSI_YELLOW), (void *)stk->data, COLOR_IF(colors, ANSI_RESET),
+                    r_cnry_name_col, COLOR_IF(colors, ANSI_RESET),
+                    r_cnry_val_col, stk->r_canary, r_cnry_end_str);
     
     if (stk->data != NULL) {
         fprintf(out, "Stack elements data %s[%p]%s:\n",

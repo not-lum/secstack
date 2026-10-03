@@ -1,3 +1,5 @@
+#pragma once
+
 #include "secstack.h"
 #include "canary_utils.h"
 

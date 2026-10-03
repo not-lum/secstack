@@ -11,6 +11,9 @@ const uint8_t L_CANARY[8] = {0xB0, 0x7C, 0xEB, 0xAC, 0x0C, 0xE7, 0xB0, 0xBE};
 // 0xABBA3EC0BA3EBAE7
 const uint8_t R_CANARY[8] = {0xAB, 0xBA, 0x3E, 0xC0, 0xBA, 0x3E, 0xBA, 0xE7};
 
+#define STRUCT_L_CANARY 0xBAADF00DFEE15AAD
+#define STRUCT_R_CANARY 0xDEADBEEFFEEDCAFE
+
 size_t left_cnry_size() {
     size_t alignment = alignof(stk_elem_t);
     if (CANARY_SIZE % alignment == 0)
@@ -93,4 +96,25 @@ void set_canaries(stack_t *stk) {
     memcpy(stk->data, &L_CANARY, CANARY_SIZE);
     guard_alignment(stk->data + CANARY_SIZE, left_cnry_size() - CANARY_SIZE);
     memcpy(get_r_canary_addr(stk), &R_CANARY, CANARY_SIZE);
+}
+
+
+void set_struct_canaries(stack_t *stk) {
+    stk->l_canary = STRUCT_L_CANARY;
+    stk->r_canary = STRUCT_R_CANARY;
+}
+
+
+bool check_struct_l_canary(stack_t *stk) {
+    if (stk->l_canary != STRUCT_L_CANARY)
+        return false;
+    
+    return true;
+}
+
+bool check_struct_r_canary(stack_t *stk) {
+    if (stk->r_canary != STRUCT_R_CANARY)
+        return false;
+    
+    return true;
 }

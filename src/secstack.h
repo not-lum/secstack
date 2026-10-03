@@ -28,6 +28,9 @@
 #   define DBUG_PRINTF_LIT "%d"
 #endif
 
+typedef uint64_t struct_cnry_t;
+#define S_CNRY_PRINTF_LIT PRIx64 
+
 typedef enum {
     STACK_OK = 0,
     STACK_INIT_ALLOC_ERROR,
@@ -39,10 +42,15 @@ typedef enum {
     STACK_LEFT_CANARY_SMASH_DETECTED,
     STACK_REALLOC_FAIL,
     STACK_NULL,
-    STACK_DATA_BAD_ALIGNMENT
+    STACK_DATA_BAD_ALIGNMENT,
+    STACK_STRUCT_LEFT_CANARY_SMASH_DETECTED,
+    STACK_STRUCT_RIGHT_CANARY_SMASH_DETECTED
 } StackStatus;
 
 typedef struct stack_t {
+    ON_DEBUG(
+    struct_cnry_t l_canary;
+    )
     uint8_t *data;
     size_t capacity;
     size_t size;
@@ -51,6 +59,8 @@ typedef struct stack_t {
     const char *_dbug_func_name;
     const char *_dbug_filename;
     int _dbug_line;
+
+    struct_cnry_t r_canary;
     )
 } stack_t;
 

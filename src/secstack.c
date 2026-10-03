@@ -49,6 +49,10 @@ const char *stack_error_str(StackStatus err) {
             return "stack null pointer";
         case STACK_DATA_BAD_ALIGNMENT:
             return "stack data pointer is misaligned";
+        case STACK_STRUCT_LEFT_CANARY_SMASH_DETECTED:
+            return "struct left canary smash detected";
+        case STACK_STRUCT_RIGHT_CANARY_SMASH_DETECTED:
+            return "struct right canary smash detected";
         default:
             return "unknown error";
     }
@@ -58,6 +62,12 @@ StackStatus stack_verify(stack_t *stk) {
     if (stk == NULL) {
         return STACK_NULL;
     }
+
+    if (!check_struct_l_canary(stk))
+        return STACK_STRUCT_LEFT_CANARY_SMASH_DETECTED;
+
+    if (!check_struct_r_canary(stk))
+        return STACK_STRUCT_RIGHT_CANARY_SMASH_DETECTED;
 
     if (stk->size > stk->capacity) {
         return STACK_SIZE_BIGGER_THAN_CAPACITY;
@@ -115,6 +125,7 @@ StackStatus stack_init(stack_t *stk, size_t capacity
     stk->_dbug_filename = _dbug_filename;
     stk->_dbug_line = _dbug_line;
     
+    set_struct_canaries(stk);
     set_canaries(stk);
     )
 
