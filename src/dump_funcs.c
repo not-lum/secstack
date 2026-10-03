@@ -74,7 +74,9 @@ void dump_canary(stack_t *stk, StackStatus status, bool left, FILE *out, bool co
 }
 
 void dump_stack_to(stack_t *stk, StackStatus status, FILE *out, bool colors) {
+    assert(stk != NULL);
     assert(out != NULL);
+
     if (status == STACK_NULL) return;
 
     if (status == STACK_OK) {
@@ -206,6 +208,8 @@ void dump_stack_to(stack_t *stk, StackStatus status, FILE *out, bool colors) {
 
 
 void dump_stack(stack_t *stk, StackStatus status) {
+    assert(stk != NULL);
+
     dump_stack_to(stk, status, stderr, true);
     FILE* log_file = fopen(".secstack.log", "a");
     if (log_file != NULL) {

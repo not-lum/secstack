@@ -58,6 +58,7 @@ const char *stack_error_str(StackStatus err) {
     }
 }
 
+
 StackStatus stack_verify(stack_t *stk) {
     if (stk == NULL) {
         return STACK_NULL;
@@ -170,7 +171,7 @@ void stack_push(stack_t *stk, stk_elem_t elem, StackStatus *err) {
     ASSERT_OK(stk);
 
     if (stk->size == stk->capacity) {
-        *err = stack_resize(stk, stk->capacity * 2);
+        *err = stack_resize(stk, (1 > stk->capacity * 2) ? (1) : (stk->capacity * 2));
         if (*err != STACK_OK)
             return;
     }
