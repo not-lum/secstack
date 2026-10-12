@@ -9,8 +9,9 @@
 #include <inttypes.h>
 
 
-ON_DEBUG(
+
 static void mem_hex(uint8_t *data, size_t data_size, size_t str_size, char *out_str) {
+    ON_DEBUG(
     assert(data != NULL);
     assert(out_str != NULL);
 
@@ -22,10 +23,12 @@ static void mem_hex(uint8_t *data, size_t data_size, size_t str_size, char *out_
     }
     
     *((char *)(out_str) + i * 2) = '\0';
+    )
 }
 
 void set_struct_cnry_format(const char **name_col, const char **val_col,
                             const char **end_str, bool colors, bool left) {
+    ON_DEBUG(
     *name_col = COLOR_IF(colors, ANSI_RED);
     *val_col = COLOR_IF(colors, ANSI_BG_RED ANSI_YELLOW);
 
@@ -37,9 +40,11 @@ void set_struct_cnry_format(const char **name_col, const char **val_col,
 
     if (!colors)
         *end_str = (left) ? "   <-- STRUCT LEFT CANARY SMASHED" : "   <-- STRUCT RIGHT CANARY SMASHED";
+    )
 }
 
 void dump_canary(stack_t *stk, StackStatus status, bool left, FILE *out, bool colors) {
+    ON_DEBUG(
     assert(stk != NULL);
     assert(out != NULL);
 
@@ -71,9 +76,11 @@ void dump_canary(stack_t *stk, StackStatus status, bool left, FILE *out, bool co
                  ind_color, (void *)cnry_addr, COLOR_IF(colors, ANSI_RESET),
                  val_color, hexed_canary, COLOR_IF(colors, ANSI_RESET),
                  arrow_color, arrow_str, COLOR_IF(colors, ANSI_RESET));
+    )
 }
 
 void dump_stack_to(stack_t *stk, StackStatus status, FILE *out, bool colors) {
+    ON_DEBUG(
     assert(stk != NULL);
     assert(out != NULL);
 
@@ -204,10 +211,12 @@ void dump_stack_to(stack_t *stk, StackStatus status, FILE *out, bool colors) {
         fprintf(out, "%s[END SECSTACK ERROR]\n\n%s",
                 COLOR_IF(colors, ANSI_RED), COLOR_IF(colors, ANSI_RESET));
     }
+    )
 }
 
 
 void dump_stack(stack_t *stk, StackStatus status) {
+    ON_DEBUG(
     assert(stk != NULL);
 
     dump_stack_to(stk, status, stderr, true);
@@ -218,5 +227,5 @@ void dump_stack(stack_t *stk, StackStatus status) {
 
         fclose(log_file);
     }
+    )
 }
-)

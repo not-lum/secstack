@@ -9,7 +9,6 @@
 // Change secstack configuration in this file:
 #include "config/secstack_config.h"
 
-#define SECSTACK_DBG
 
 #ifdef SECSTACK_DBG
 #   define ON_DEBUG(...) __VA_ARGS__
@@ -28,7 +27,7 @@
                __LINE__));
 
 
-#define R_DATA (stk_elem_t *)(stk->data + left_cnry_size())
+#define R_DATA (stk_elem_t *)(stk->data ON_DEBUG(+ left_cnry_size()))
  
 typedef enum {
     STACK_OK = 0,

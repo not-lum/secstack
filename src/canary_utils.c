@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdalign.h>
 
+
 #define STRUCT_L_CANARY 0xBAADF00DFEE15AAD 
 #define STRUCT_R_CANARY 0xDEADBEEFFEEDCAFE 
 
@@ -18,34 +19,41 @@ const uint8_t R_CANARY[8] = {
 
 
 size_t left_cnry_size() {
+    ON_DEBUG(
     size_t alignment = alignof(stk_elem_t);
     if (CANARY_SIZE % alignment == 0)
         return CANARY_SIZE;
     else
         return CANARY_SIZE + alignment - (CANARY_SIZE % alignment);
+    )
 }
 
 uint8_t *get_aligned_addr(uint8_t *addr, size_t alignment) {
     // dest + x % CANARY_SIZE = 0
     // => x = CANARY_SIZE - dest (mod CANARY_SIZE)
 
+    ON_DEBUG(
     size_t remainder = (size_t)addr % alignment;
     
     if (remainder == 0)
         return addr;
     else
         return addr + CANARY_SIZE - remainder;
+    )
 }
 
 
 void guard_alignment(uint8_t *addr, size_t padding_size) {
+    ON_DEBUG(
     for (size_t i = 0; i < padding_size; i++) {
         *(addr + i) = ALIGNMENT_FILL;
     }
+    )
 }
 
 
 bool check_l_canary(stack_t *stk) {
+    ON_DEBUG(
     for (size_t i = 0; i < left_cnry_size(); i++) {
         if ((i < CANARY_SIZE && stk->data[i] != L_CANARY[i]) ||
             (i >= CANARY_SIZE && stk->data[i] != ALIGNMENT_FILL))
@@ -53,15 +61,19 @@ bool check_l_canary(stack_t *stk) {
     }
 
     return true;
+    )
 }
 
 
 uint8_t *get_r_canary_addr(stack_t *stk) {
+    ON_DEBUG(
     return get_aligned_addr(stk->data + left_cnry_size() + stk->size * sizeof(stk_elem_t), CANARY_SIZE);
+    )
 }
 
 
 bool check_r_canary(stack_t *stk) {
+    ON_DEBUG(
     uint8_t *r_canary_addr = get_r_canary_addr(stk);
     uint8_t *r_canary_padd_addr = stk->data + left_cnry_size() + stk->size * sizeof(stk_elem_t);
 
@@ -78,10 +90,12 @@ bool check_r_canary(stack_t *stk) {
     }
 
     return true;
+    )
 }
 
 
 void move_right_canary(stack_t *stk, bool to_right) {
+    ON_DEBUG(
     uint8_t *src = get_r_canary_addr(stk);
     uint8_t *last_elem_addr = stk->data + left_cnry_size() + stk->size * sizeof(stk_elem_t);
     uint8_t *dest = (to_right) ? (src + sizeof(stk_elem_t)) : (last_elem_addr - sizeof(stk_elem_t));
@@ -92,32 +106,41 @@ void move_right_canary(stack_t *stk, bool to_right) {
         memmove(aligned_dest, src, CANARY_SIZE);
         guard_alignment(dest, aligned_dest - dest);
     }
+    )
 }
 
 
 void set_canaries(stack_t *stk) {
+    ON_DEBUG(
     memcpy(stk->data, &L_CANARY, CANARY_SIZE);
     guard_alignment(stk->data + CANARY_SIZE, left_cnry_size() - CANARY_SIZE);
     memcpy(get_r_canary_addr(stk), &R_CANARY, CANARY_SIZE);
+    )
 }
 
 
 void set_struct_canaries(stack_t *stk) {
+    ON_DEBUG(
     stk->l_canary = STRUCT_L_CANARY;
     stk->r_canary = STRUCT_R_CANARY;
+    )
 }
 
 
 bool check_struct_l_canary(stack_t *stk) {
+    ON_DEBUG(
     if (stk->l_canary != STRUCT_L_CANARY)
         return false;
     
     return true;
+    )
 }
 
 bool check_struct_r_canary(stack_t *stk) {
+    ON_DEBUG(
     if (stk->r_canary != STRUCT_R_CANARY)
         return false;
     
     return true;
+    )
 }

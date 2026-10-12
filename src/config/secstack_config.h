@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#define SECSTACK_DBG               // undefine if you want to disable debug
+
 #define ALIGNMENT_FILL 0x67        // byte used to fill alignment padding of canaries
 #define CANARY_SIZE 8              // pretty self-explanatory. size in bytes, of course
 #define stk_elem_t int             // type of stack elements
