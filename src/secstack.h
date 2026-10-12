@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+// TODO: add option to modify canaries in config file
 // Change secstack configuration in this file:
 #include "config/secstack_config.h"
 
