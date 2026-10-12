@@ -5,12 +5,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+// Change secstack configuration in this file:
+#include "config/secstack_config.h"
+
 #define SECSTACK_DBG
-
-#define ALIGNMENT_FILL 0x67
-#define CANARY_SIZE 8
-#define R_DATA (stk_elem_t *)(stk->data + left_cnry_size())
-
 
 #ifdef SECSTACK_DBG
 #   define ON_DEBUG(...) __VA_ARGS__
@@ -20,17 +18,17 @@
 
 #define VAR_NAME(x) #x
 
-#ifndef stk_elem_t
-#   define stk_elem_t int
-#endif
+#define STACK_INIT_DBG(stk, capacity) \
+    stack_init((stk), (capacity) \
+               ON_DEBUG(, \
+               VAR_NAME((stk)), \
+               __func__, \
+               __FILE__, \
+               __LINE__));
 
-#ifndef DBUG_PRINTF_LIT
-#   define DBUG_PRINTF_LIT "%d"
-#endif
 
-typedef uint64_t struct_cnry_t;
-#define S_CNRY_PRINTF_LIT PRIx64 
-
+#define R_DATA (stk_elem_t *)(stk->data + left_cnry_size())
+ 
 typedef enum {
     STACK_OK = 0,
     STACK_INIT_ALLOC_ERROR,
