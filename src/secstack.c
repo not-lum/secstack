@@ -234,10 +234,13 @@ StackStatus stack_pop_n(stack_t *stk, size_t n, ...) {
         
         *out_var = stack_pop(stk, &status);
 
-        if (status != STACK_OK)
+        if (status != STACK_OK) {
+            va_end(args);
             return status;
+        }
     }
 
+    va_end(args);
     return STACK_OK;
 }
 
