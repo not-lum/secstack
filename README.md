@@ -7,6 +7,7 @@
 * `stack_init`
 * `stack_push`
 * `stack_pop`
+* `stack_pop_n`
 * `stack_verify`
 * `stack_destroy`
 * `dump_stack_to`

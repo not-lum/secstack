@@ -76,3 +76,4 @@ const char *stack_error_str(StackStatus err);
 StackStatus stack_verify(stack_t *stk);
 StackStatus canary_verify(stack_t *stk);
 void stack_destroy(stack_t *stk);
+StackStatus stack_pop_n(stack_t *stk, size_t n, ...);

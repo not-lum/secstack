@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdalign.h>
+#include <stdarg.h>
 
 
 #define ASSERT_OK(stk) do { \
@@ -219,6 +220,25 @@ stk_elem_t stack_pop(stack_t *stk, StackStatus *err) {
     *err = STACK_OK;
 
     return last_elem;
+}
+
+StackStatus stack_pop_n(stack_t *stk, size_t n, ...) {
+    va_list args;
+    va_start(args, n);
+
+    while (n--) {
+        StackStatus status = 0;
+
+        stk_elem_t *out_var = va_arg(args, stk_elem_t *);
+        assert(out_var != NULL);
+        
+        *out_var = stack_pop(stk, &status);
+
+        if (status != STACK_OK)
+            return status;
+    }
+
+    return STACK_OK;
 }
 
 void stack_destroy(stack_t *stk) {
