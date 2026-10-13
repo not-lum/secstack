@@ -83,7 +83,7 @@ bool check_r_canary(stack_t *stk) {
         }
     }
 
-    for (size_t i = 0; i < r_canary_addr - r_canary_padd_addr; i++) {
+    for (size_t i = 0; i < (size_t)r_canary_addr - (size_t)r_canary_padd_addr; i++) {
         if (*(r_canary_padd_addr + i) != ALIGNMENT_FILL) {
             return false;
         }
