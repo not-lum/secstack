@@ -147,7 +147,7 @@ static void *recalloc(void *old_ptr, size_t new_size) {
     if (tmp == NULL)
         return NULL;
 
-    memset(old_ptr + new_size, 0, malloc_usable_size(tmp) - new_size);
+    memset(tmp + new_size, 0, malloc_usable_size(tmp) - new_size);
 
     return tmp;
 }
