@@ -46,7 +46,7 @@ uint8_t *get_aligned_addr(uint8_t *addr, size_t alignment) {
 void guard_alignment(uint8_t *addr, size_t padding_size) {
     ON_DEBUG(
     for (size_t i = 0; i < padding_size; i++) {
-        *(addr + i) = ALIGNMENT_FILL;
+        *(addr + i) = CNRY_ALIGNMENT_FILL;
     }
     )
 }
@@ -56,7 +56,7 @@ bool check_l_canary(stack_t *stk) {
     ON_DEBUG(
     for (size_t i = 0; i < left_cnry_size(); i++) {
         if ((i < CANARY_SIZE && stk->data[i] != L_CANARY[i]) ||
-            (i >= CANARY_SIZE && stk->data[i] != ALIGNMENT_FILL))
+            (i >= CANARY_SIZE && stk->data[i] != CNRY_ALIGNMENT_FILL))
             return false;
     }
 
@@ -84,7 +84,7 @@ bool check_r_canary(stack_t *stk) {
     }
 
     for (size_t i = 0; i < (size_t)r_canary_addr - (size_t)r_canary_padd_addr; i++) {
-        if (*(r_canary_padd_addr + i) != ALIGNMENT_FILL) {
+        if (*(r_canary_padd_addr + i) != CNRY_ALIGNMENT_FILL) {
             return false;
         }
     }

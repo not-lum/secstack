@@ -154,7 +154,7 @@ void dump_stack_to(stack_t *stk, StackStatus status, FILE *out, bool colors) {
             }
         
             fprintf(out, "%s[%zu]%s"
-                        " = %s<" DBUG_PRINTF_LIT ">%s"
+                        " = %s<" STK_ELEM_PRINTF_FMT ">%s"
                         "%s\n%s",
                         begin_str, i, COLOR_IF(colors, ANSI_RESET),
                         COLOR_IF(colors, ANSI_YELLOW), *(R_DATA + i), COLOR_IF(colors, ANSI_RESET),
