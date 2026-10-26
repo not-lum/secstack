@@ -96,13 +96,13 @@ void dump_stack_to(stack_t *stk, StackStatus status, FILE *out, bool colors) {
                 COLOR_IF(colors, ANSI_RESET));
     }
 
-    const char *l_cnry_name_col = ANSI_PURPLE;
-    const char *l_cnry_val_col = ANSI_GREEN;
-    const char *l_cnry_end_str = ANSI_RESET;
+    const char *l_cnry_name_col = COLOR_IF(colors, ANSI_PURPLE);
+    const char *l_cnry_val_col = COLOR_IF(colors, ANSI_GREEN);
+    const char *l_cnry_end_str = COLOR_IF(colors, ANSI_RESET);
 
-    const char *r_cnry_name_col = ANSI_PURPLE;
-    const char *r_cnry_val_col = ANSI_GREEN;
-    const char *r_cnry_end_str = ANSI_RESET;
+    const char *r_cnry_name_col = COLOR_IF(colors, ANSI_PURPLE);
+    const char *r_cnry_val_col = COLOR_IF(colors, ANSI_GREEN);
+    const char *r_cnry_end_str = COLOR_IF(colors, ANSI_RESET);
 
     if (status == STACK_STRUCT_LEFT_CANARY_SMASH_DETECTED) {
         set_struct_cnry_format(&l_cnry_name_col, &l_cnry_val_col,
@@ -220,7 +220,7 @@ void dump_stack(stack_t *stk, StackStatus status) {
     assert(stk != NULL);
 
     dump_stack_to(stk, status, stderr, true);
-    FILE* log_file = fopen(".secstack.log", "a");
+    FILE* log_file = fopen(SECSTACK_LOG_FILE, "a");
     if (log_file != NULL) {
         setvbuf(log_file, NULL, _IONBF, 0);
         dump_stack_to(stk, status, log_file, false);
