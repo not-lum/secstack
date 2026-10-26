@@ -9,7 +9,10 @@
 * `stack_pop`
 * `stack_pop_n`
 * `stack_verify`
+* `canary_verify`
+* `stack_error_str`
 * `stack_destroy`
+* `dump_stack`
 * `dump_stack_to`
 
 Буффер стека выделяется в куче, его размер автоматически регулируется: если логический размер стека (`size`) достигает размера выделенной под неё памяти (`capacity`), `capacity` вдвоё увеличивается. Если `size` становится меньше или равен четверти `capacity`, `capacity` вдвоё уменьшается.

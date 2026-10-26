@@ -230,7 +230,8 @@ StackStatus stack_pop_n(stack_t *stk, size_t n, ...) {
         StackStatus status = 0;
 
         stk_elem_t *out_var = va_arg(args, stk_elem_t *);
-        assert(out_var != NULL);
+        if (out_var == NULL)
+            continue;
         
         *out_var = stack_pop(stk, &status);
 
