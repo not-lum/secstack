@@ -171,13 +171,14 @@ static StackStatus stack_resize(stack_t *stk, size_t new_capacity) {
 
 void stack_push(stack_t *stk, stk_elem_t elem, StackStatus *err) {
     assert(stk != NULL);
-    assert(err != NULL);
     ASSERT_OK(stk);
 
     if (stk->size == stk->capacity) {
-        *err = stack_resize(stk, (1 > stk->capacity * 2) ? (1) : (stk->capacity * 2));
-        if (*err != STACK_OK)
+        StackStatus status = stack_resize(stk, (1 > stk->capacity * 2) ? (1) : (stk->capacity * 2));
+        if (status != STACK_OK) {
+            if (err != NULL) *err = status;
             return;
+        }
     }
 
     ON_DEBUG(
@@ -186,7 +187,7 @@ void stack_push(stack_t *stk, stk_elem_t elem, StackStatus *err) {
     *(R_DATA + stk->size) = elem;
     stk->size++;
 
-    *err = STACK_OK;
+    if (err != NULL) *err = STACK_OK;
 
     ASSERT_OK(stk);
 }
@@ -194,11 +195,10 @@ void stack_push(stack_t *stk, stk_elem_t elem, StackStatus *err) {
 
 stk_elem_t stack_pop(stack_t *stk, StackStatus *err) {
     assert(stk != NULL);
-    assert(err != NULL);
     ASSERT_OK(stk);
 
     if (stk->size == 0) {
-        *err = STACK_CANNOT_POP_FROM_EMPTY;
+        if (err != NULL) *err = STACK_CANNOT_POP_FROM_EMPTY;
         return 0;
     }
 
@@ -208,16 +208,18 @@ stk_elem_t stack_pop(stack_t *stk, StackStatus *err) {
     )
 
     if (stk->size - 1 <= stk->capacity / 4) {
-        *err = stack_resize(stk, stk->capacity / 2);
-        if (*err != STACK_OK)
+        StackStatus status = stack_resize(stk, stk->capacity / 2);
+        if (status != STACK_OK) {
+            if (err != NULL) *err = status;
             return 0;
+        }
     }
 
     stk->size--;
 
     ASSERT_OK(stk);
 
-    *err = STACK_OK;
+    if (err != NULL) *err = STACK_OK;
 
     return last_elem;
 }
