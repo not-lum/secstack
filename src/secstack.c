@@ -199,7 +199,7 @@ stk_elem_t stack_pop(stack_t *stk, StackStatus *err) {
 
     if (stk->size == 0) {
         if (err != NULL) *err = STACK_CANNOT_POP_FROM_EMPTY;
-        return 0;
+        return (stk_elem_t){};
     }
 
     stk_elem_t last_elem = *(R_DATA + stk->size - 1);
@@ -211,7 +211,7 @@ stk_elem_t stack_pop(stack_t *stk, StackStatus *err) {
         StackStatus status = stack_resize(stk, stk->capacity / 2);
         if (status != STACK_OK) {
             if (err != NULL) *err = status;
-            return 0;
+            return (stk_elem_t){};
         }
     }
 
